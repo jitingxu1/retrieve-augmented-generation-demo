@@ -68,4 +68,4 @@ To run Integration test
 - Best way to reduce hallucination is by retrieving userful and factual information
    1. Chunk size experimentation
    2. Chunk with contextual information: neighbors and parent information.
-- 
+- Prompt emgineering
