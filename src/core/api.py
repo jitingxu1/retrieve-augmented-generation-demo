@@ -404,6 +404,7 @@ async def upload_pdf(
     # Cacculate embeddings
     for index, text in enumerate(chunks):
         logger.info(f"Chunk {index}'s size is {len(text)}")
+        logger.info("Text = {text}")
         text_hash = str(hash(text))
         logger.info(f"embedding id = {text_hash}")
         # Pull LlaMma embeddings
