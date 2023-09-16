@@ -1,15 +1,14 @@
-from fastapi import Depends, APIRouter, HTTPException, status
 import logging
 import time
-from langchain.vectorstores import Pinecone
-from langchain.embeddings.openai import OpenAIEmbeddings
+
 import pinecone
-from langchain.docstore.document import Document
-from langchain.chains import RetrievalQA
-from langchain import LLMChain, PromptTemplate
-from langchain.llms import LlamaCpp, OpenAI
-from dotenv import load_dotenv
 from decouple import config
+from dotenv import load_dotenv
+from fastapi import APIRouter, HTTPException
+from langchain import LLMChain, PromptTemplate
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.llms import OpenAI
+from langchain.vectorstores import Pinecone
 
 from src.schemas import QueryRequest, QueryResponse
 
@@ -49,20 +48,21 @@ Question:
 """
 
 prompt = PromptTemplate(
-        template=TEMPLATE,
-        input_variables=["question", "support_doc"]
-    )
+    template=TEMPLATE,
+    input_variables=["question", "support_doc"]
+)
+
 
 @router.post(
-        "/query",
-        response_model=QueryResponse,
-        dependencies=[],
-        responses = {},
-        response_model_exclude_none=True,
+    "/query",
+    response_model=QueryResponse,
+    dependencies=[],
+    responses={},
+    response_model_exclude_none=True,
 )
 async def query(
     request: QueryRequest,
-    config, # add configureations
+    config,  # add configureations
 ) -> QueryResponse:
     try:
         start_time = time.time()
@@ -84,10 +84,10 @@ async def query(
         message = llm_chain.run(
             {
                 "question": query,
-                "support_doc":documents[0].page_content
+                "support_doc": documents[0].page_content
             }
         )
-        # TODO: Add callback functions to sycn the QA to database
+        # TODO: Add callback functions to sync the QA to database
         return QueryResponse(
             query=query,
             answers=message,
