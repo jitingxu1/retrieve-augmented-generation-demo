@@ -1,39 +1,16 @@
+
+# Reference
+- [llmsearch](https://github.com/snexus/llm-search/tree/main/src/llmsearch)
+- [cobert](https://github.com/IntelLabs/fastRAG/blob/main/fastrag/retrievers/colbert.py)
+- [verba](https://github.com/weaviate/Verba/blob/main/goldenverba/retrieval/advanced_engine.py)
+- [rag](https://github.com/ray-project/llm-applications/blob/main/notebooks/rag.ipynb)
+- [akcio](https://github.com/zilliztech/akcio/tree/main/src_towhee)
+- [titan](https://github.com/aws-samples/rag-using-langchain-amazon-bedrock-and-opensearch/blob/main/ask-titan-with-rag.py)
+- [RAGstack](https://github.com/psychic-api/rag-stack/blob/main/server/server/main.py)
+- [SEC-Insights](https://github.com/run-llama/sec-insights/blob/main/backend/app/api/crud.py)
+
 # Retrieve Augmented Generation
-Retrieval Augmented Generation (RAG) systems that combine large language models with a private knowledge base. It generally consists of two stages: the indexing stage and the querying stage.
-
-<img src="images/workflow.png" alt="Description of the image" width="600" height="300">
-
-## Indexing stage
-
-Convert PDF files into vectors and save the vectors and text in pinecone.
-
-1. Use `PyPDF` to split pages and extract contents.
-2. `NLTK` preprocess the texts into sentences.
-3. Divide the sentences into chunks with a max size limit.
-4. Convert chunks of sentences into embedings.
-   - `LlaMmacpp` 7b 4 bit
-   - `OpenAI` Embedding API
-5. Save embedings with metadata into pinecone.
-   - `llamma-index`, dimension: 4096
-   - `openai-index`, dimension: 1536
-   - metadata: sentences, pdf_file_name,
-6. Return statistics to the user.
-   - cnt_new_vectors
-   - total_vector_count
-   - index_fullness
-   - dimension
-   - file_name
-
-## Querying stage
-
-Ask question against existing knowledge base.
-
-1. Convert question into vector using the same embedding tool to the above document embedings.
-2. Query `Pinecone` index to pull top K relevant chunks with metadata filters.
-   - Pinecone builtin filters: namespace, metadata.
-   - Extra filters: Minimum similarity threshold - Optional.
-3. Combine the questions, relevant texts, and other information to form the prompt.
-4. LLM response.
+Redegin the RAG system
 
 ## Setup instructions
 
