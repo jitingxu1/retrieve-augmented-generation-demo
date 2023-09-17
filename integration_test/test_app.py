@@ -1,11 +1,14 @@
-import pytest
-import time
-from fastapi.testclient import TestClient
-from core.api import app
-import requests
 import os
+import time
+
+import pytest
+import requests
+from fastapi.testclient import TestClient
+
+from core.api import app
 
 client = TestClient(app)
+
 
 @pytest.fixture(scope="module")
 def reset_index():
@@ -13,6 +16,7 @@ def reset_index():
     response = requests.post(url)
     assert response.status_code == 200
     time.sleep(5)
+
 
 def test_pdf_process(reset_index):
     url = "http://127.0.0.1:8000/process_pdf/"
@@ -27,6 +31,7 @@ def test_pdf_process(reset_index):
     assert data['cnt_new_llamma_vectors'] == 4
     assert data['cnt_new_openai_vectors'] == 4
 
+
 def test_ask():
     api_url = "http://localhost:8000/ask"
 
@@ -35,7 +40,7 @@ def test_ask():
         "question": "what is insurance",
         "query_model": "llamma",
         "top_k": 1,
-        "distance_threshold": 0,    
+        "distance_threshold": 0,
         "pdf_document": "what-is-insurance_handout.pdf"
     }
 
@@ -44,5 +49,3 @@ def test_ask():
     assert response.status_code == 200
     data = response.json()
     assert len(data['answer']) > 1
-    
-

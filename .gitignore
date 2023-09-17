@@ -80,6 +80,7 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+.ipynb
 
 # IPython
 profile_default/
@@ -142,3 +143,5 @@ db/
 
 # DS_store
 .DS_Store
+
+.vscode

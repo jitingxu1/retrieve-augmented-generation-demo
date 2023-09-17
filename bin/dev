@@ -1,3 +1,3 @@
 #!/usr/bin/env sh
 
-exec poetry run uvicorn core.api:app --reload "$@"
+exec poetry run uvicorn rag.main:app --reload "$@"
