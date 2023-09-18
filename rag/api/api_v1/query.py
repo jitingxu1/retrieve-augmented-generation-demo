@@ -21,6 +21,10 @@ from rag.schemas import QueryRequest, QueryResponse, InsertFileResponse
 from rag.config import AppConfig
 from pydantic import BaseModel
 
+from rag.core.llm_chat.llm_chat import load_llm
+from rag.core.embeddings.embedding_model import load_embedding
+from rag.core.vector_store.base import load_vector_store
+
 # ref: https://github.com/psychic-api/rag-stack/blob/main/server/server/main.py
 
 load_dotenv()
@@ -40,11 +44,11 @@ PINECONE_ENVIRONMENT = config(
     "PINECONE_ENVIRONMENT",
     default="gcp-starter", cast=str
 )
-pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
-index = pinecone.Index("rag-demo")
-embeddings = OpenAIEmbeddings()
-vector_store = Pinecone(index, embeddings.embed_query, "text")
-gpt35 = ChatOpenAI(model_name="gpt-3.5-turbo")
+# pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
+# index = pinecone.Index("rag-demo")
+embeddings = load_embedding("openai")
+vector_store = load_vector_store("pinecone", embeddings) # Pinecone(index, embeddings.embed_query, "text")
+chat_model = load_llm("gpt-3.5-turbo")
 MAX_CHUNK_SIZE = 1000
 TEMPLATE = """
 Answer question with above context using the following steps:
@@ -189,7 +193,7 @@ def question(
         )
         # # TODO: able to stwitch LLM for answering questions
         # # reference: https://github.com/zilliztech/akcio/tree/main/src_langchain/llm
-        llm_chain = LLMChain(prompt=prompt, llm=gpt35)
+        llm_chain = LLMChain(prompt=prompt, llm=chat_model)
         message = llm_chain.run(
             {
                 "question": question,
