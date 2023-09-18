@@ -41,13 +41,11 @@ PINECONE_ENVIRONMENT = config(
     default="gcp-starter", cast=str
 )
 pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
-# logger.info(PINECONE_API_KEY, PINECONE_ENVIRONMENT)
 index = pinecone.Index("rag-demo")
-logger.info(index.__dict__)
 embeddings = OpenAIEmbeddings()
-logger.info(embeddings.openai_api_key)
 vector_store = Pinecone(index, embeddings.embed_query, "text")
 gpt35 = ChatOpenAI(model_name="gpt-3.5-turbo")
+MAX_CHUNK_SIZE = 1000
 TEMPLATE = """
 Answer question with above context using the following steps:
 1) Context Relevance Check:
@@ -72,6 +70,9 @@ prompt = PromptTemplate(
     template=TEMPLATE,
     input_variables=["question", "support_doc"]
 )
+
+class ErrorMessage(BaseModel):
+    detail: str
 
 def nltk_senetnces(pdf: UploadFile = File(...)) -> list[str]:
     """
@@ -99,27 +100,64 @@ def nltk_senetnces(pdf: UploadFile = File(...)) -> list[str]:
     except Exception as e:
         logger.error(f"error: {str(e)}")
 
+def chunk_fixed_size(
+    sentences: list[str],
+    max_size: int
+) -> list[str]:
+    """
+    Split a list of sentences into chunks with a maximum size.
+
+    Args:
+        sentences (list[str]): The list of sentences to be chunked.
+        max_size (int): The maximum size of each chunk.
+
+    Returns:
+        list[str]: A list of chunks where each chunk
+        contains sentences with a total length
+        not exceeding max_size.
+    """
+    chunks = []
+    a_chunk = []
+    curr_size = 0
+    for s in sentences:
+        len_s = len(s)
+        if curr_size + len_s <= max_size:
+            a_chunk.append(s)
+            curr_size += len_s
+        else:
+            chunks.append(" ".join(a_chunk))
+            a_chunk = []
+            curr_size = 0
+    return chunks
+
 @router.post(
     "/upload-files",
     response_model=InsertFileResponse,
     dependencies=[],
-    # response={},
+    responses={
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "model": ErrorMessage,
+        },
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {
+            "model": ErrorMessage,
+        },
+    },
 )
-async def upload_files(
+def upload_files(
     pdf: UploadFile = File(...), # TODO: Consume generic files
     # configs: AppConfig() = None
 ) -> InsertFileResponse:
     try:
-        logger.log("Upload files..")
         sentences = nltk_senetnces(pdf)
-        doc = Document(page_content=" ".join(sentences))
-        success = await vector_store.aadd_documents(doc)
-        return InsertFileResponse(success=success)
+        chunks = chunk_fixed_size(sentences, MAX_CHUNK_SIZE)
+        docs = [Document(page_content=chunk) for chunk in chunks]
+        ids = vector_store.add_documents(docs)
+        logger.info(ids)
+        return InsertFileResponse(success=True)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-class ErrorMessage(BaseModel):
-    detail: str
+
     
 @router.post(
     "/question",
@@ -128,11 +166,9 @@ class ErrorMessage(BaseModel):
     responses={
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "model": ErrorMessage,
-            "description": "Ok Response",
         },
         status.HTTP_500_INTERNAL_SERVER_ERROR: {
             "model": ErrorMessage,
-            "description": "Creates something from user request ",
         },
     },
     response_model_exclude_none=True,
