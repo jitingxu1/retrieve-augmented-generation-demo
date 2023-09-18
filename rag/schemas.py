@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 # from haystack.schema import Answer, Document
 from pydantic import BaseConfig, BaseModel, Extra, Field
@@ -24,13 +24,8 @@ class BaseResponse(BaseModel):
 
 class QueryResponse(BaseModel):
     query: str
-    answers: Optional[List] = []
-    documents: List[Document] = []
-    images: Optional[Dict] = None
-    relations: Optional[List] = None
-    debug: Optional[Dict] = Field(None, alias="_debug")
-    timings: Optional[Dict] = None
-    results: Optional[List] = None
+    documents: List[Tuple[Document, float]]
+    answer: str
 
 class InsertFileResponse(BaseResponse):
     success: bool

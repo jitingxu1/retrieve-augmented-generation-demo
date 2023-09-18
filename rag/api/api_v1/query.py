@@ -14,6 +14,8 @@ from typing import List
 from langchain.docstore.document import Document
 from langchain.document_loaders import PyPDFLoader
 from nltk.tokenize import sent_tokenize
+from pinecone.core.client.model.vector import Vector
+from langchain.chat_models import ChatOpenAI
 
 from rag.schemas import QueryRequest, QueryResponse, InsertFileResponse
 from rag.config import AppConfig
@@ -39,12 +41,13 @@ PINECONE_ENVIRONMENT = config(
     default="gcp-starter", cast=str
 )
 pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
-index = pinecone.Index("langchain-demo")
+# logger.info(PINECONE_API_KEY, PINECONE_ENVIRONMENT)
+index = pinecone.Index("rag-demo")
 logger.info(index.__dict__)
 embeddings = OpenAIEmbeddings()
 logger.info(embeddings.openai_api_key)
-vector_store = Pinecone(index, embeddings.aembed_query, "text")
-gpt35 = OpenAI(model_name="gpt-3.5-turbo")
+vector_store = Pinecone(index, embeddings.embed_query, "text")
+gpt35 = ChatOpenAI(model_name="gpt-3.5-turbo")
 TEMPLATE = """
 Answer question with above context using the following steps:
 1) Context Relevance Check:
@@ -124,122 +127,45 @@ class ErrorMessage(BaseModel):
     # TODO: figure our how to do response, what does this mean
     responses={
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
-            "model": ErrorMessage, # custom pydantic model for 200 response
+            "model": ErrorMessage,
             "description": "Ok Response",
         },
         status.HTTP_500_INTERNAL_SERVER_ERROR: {
-            "model": ErrorMessage,  # custom pydantic model for 201 response
+            "model": ErrorMessage,
             "description": "Creates something from user request ",
-        },
-        status.HTTP_202_ACCEPTED: {
-            "model": "",  # custom pydantic model for 202 response
-            "description": "Accepts request and handles it later",
         },
     },
     response_model_exclude_none=True,
 )
-async def question(
-    question: str,
-):
-    
+def question(
+    question: str, #QueryRequest,
+) -> QueryResponse:
     try:
-        start_time = time.time()
-        query = "hello"
-        logger.info(f"question: {question}")
-        logger.info(embeddings.openai_api_key)
-        #logger.info(embeddings.embed_documents(texts=["Hello"]))
-        question_embed = embeddings.embed_documents(texts=[question])
-        logger.info(len(question_embed[0]))
-        vector_store.add_texts(list(question))
-        logger.info("inserted...")
-        res = index.query(
-            vector=question_embed,
-            top_k=1
-        )
-        logger.info(f"*****{res}")
         # # Use high-level abstraction RetrieveQA in langchain
         # # https://github.com/aws-samples/rag-using-langchain-amazon-bedrock-and-opensearch/blob/main/ask-titan-with-rag.py
         # # Also could implement our own retriever
         # # https://github.com/IntelLabs/fastRAG/blob/main/fastrag/retrievers/colbert.py
-        # documents = await vector_store.similarity_search_with_score(
-        #     query=query,
-        #     k=1,
-        #     filter=None,
-        #     namespace=None
-        # )
-        # logger.info("query db")
-
-        # # TODO: able to stwitch LLM for answering questions
-        # # reference: https://github.com/zilliztech/akcio/tree/main/src_langchain/llm
-        # llm_chain = LLMChain(prompt=prompt, llm=gpt35)
-        # message = llm_chain.run(
-        #     {
-        #         "question": query,
-        #         "support_doc": documents[0].page_content
-        #     }
-        # )
-        # TODO: Add callback functions to sync the QA to database
-        return QueryResponse(
-            query=query,
-            timings=f"{(time.time() - start_time):.2f}"
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post(
-    "/query",
-    response_model=QueryResponse,
-    #dependencies=[],
-    responses={
-        status.HTTP_200_OK: {
-            "model": "", # custom pydantic model for 200 response
-            "description": "Ok Response",
-        },
-        status.HTTP_201_CREATED: {
-            "model": "",  # custom pydantic model for 201 response
-            "description": "Creates something from user request ",
-        },
-        status.HTTP_202_ACCEPTED: {
-            "model": "",  # custom pydantic model for 202 response
-            "description": "Accepts request and handles it later",
-        },
-    },
-    response_model_exclude_none=True,
-)
-async def query(
-    # request: str, #QueryRequest,
-    # config,  # add configureations
-) -> QueryResponse:
-    try:
-        start_time = time.time()
-        query = "hello"
-        # Use high-level abstraction RetrieveQA in langchain
-        # https://github.com/aws-samples/rag-using-langchain-amazon-bedrock-and-opensearch/blob/main/ask-titan-with-rag.py
-        # Also could implement our own retriever
-        # https://github.com/IntelLabs/fastRAG/blob/main/fastrag/retrievers/colbert.py
-        documents = await vector_store.similarity_search_with_score(
-            query=query,
-            k=1,
+        documents = vector_store.similarity_search_with_score(
+            query=question,
+            k=2,
             filter=None,
             namespace=None
         )
-
-        # TODO: able to stwitch LLM for answering questions
-        # reference: https://github.com/zilliztech/akcio/tree/main/src_langchain/llm
+        # # TODO: able to stwitch LLM for answering questions
+        # # reference: https://github.com/zilliztech/akcio/tree/main/src_langchain/llm
         llm_chain = LLMChain(prompt=prompt, llm=gpt35)
         message = llm_chain.run(
             {
-                "question": query,
-                "support_doc": documents[0].page_content
+                "question": question,
+                "support_doc": documents[0][0].page_content
             }
         )
+
         # TODO: Add callback functions to sync the QA to database
         return QueryResponse(
-            query=query,
-            answers=message,
+            query=question,
             documents=documents,
-            timings=f"{(time.time() - start_time):.2f}"
-        )
+            answer=message,
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
