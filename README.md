@@ -11,6 +11,9 @@
 - [gpt4-pdf-chatbot-langchain](https://github.com/mayooear/gpt4-pdf-chatbot-langchain)
 - [frontend repo](https://github.com/zahidkhawaja/langchain-chat-nextjs)
 
+# Tools
+- [Preprocessing of structured and unstructured documents](https://unstructured-io.github.io/unstructured/introduction.html)
+
 # Learnings: 
 - [reference: llm-search](https://www.reddit.com/r/LocalLLaMA/comments/16cbimi/yet_another_rag_system_implementation_details_and/)
 ## Pre-processing and chunking
